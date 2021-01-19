@@ -23,12 +23,14 @@ package diff
 	\ match
 */
 
+// Delta represents an operation (Delete and/or Insert) at an Offset.
 type Delta struct {
 	Offset uint
 	Delete uint
 	Insert []byte
 }
 
+// Apply modifies the given input with the given Delta.
 func Apply(input []byte, delta *Delta) []byte {
 	count := 0
 	length := uint(len(input))
@@ -44,8 +46,8 @@ func Apply(input []byte, delta *Delta) []byte {
 	return output
 }
 
+// Compact combines deltas with same offset or consecutive deletes.
 func Compact(deltas []*Delta) (results []*Delta) {
-	// Combine deltas with same offset or consecutive deletes
 	for i := 0; i < len(deltas); {
 		first := deltas[i]
 		j := i + 1
@@ -64,16 +66,17 @@ func Compact(deltas []*Delta) (results []*Delta) {
 	return
 }
 
+// Cost returns the total cost of the given deltas.
 func Cost(deltas []*Delta) (cost uint) {
-	// Sum cost of deltas
 	for _, d := range deltas {
-		cost += 1                       // Every delta has a cost of 1
+		cost++                          // Every delta has a cost of 1
 		cost += d.Delete                // Count every removed byte
 		cost += uint(len(d.Insert) * 8) // Count every added byte
 	}
 	return
 }
 
+// Diff returns a sequence of deltas that transform the first of the given byte arrays to the second.
 func Diff(a, b []byte) (deltas []*Delta) {
 	deltas = diff(a, b, 0, 0)
 	// Rebase deltas into sequence
