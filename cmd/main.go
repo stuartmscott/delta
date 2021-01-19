@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/stuartmscott/diff"
+	"github.com/stuartmscott/delta"
 	"log"
 	"os"
 )
 
 func main() {
 	if len(os.Args) < 3 {
-		log.Fatal("Usage: diff a b")
+		log.Fatal("Usage: delta a b")
 	}
 	a := []byte(os.Args[1])
 	b := []byte(os.Args[2])
 	buffer := a
-	for i, d := range diff.Diff(a, b) {
-		buffer = diff.Apply(buffer, d)
+	for i, d := range delta.Deltas(a, b) {
+		buffer = delta.Apply(buffer, d)
 		output := []interface{}{i + 1, "Offset:", d.Offset}
 		if d.Delete > 0 {
 			output = append(output, "Delete:", d.Delete)

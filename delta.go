@@ -1,4 +1,4 @@
-package diff
+package delta
 
 /*
 	Eugene W. Myers - An O(ND)Difference Algorithm and Its Variations
@@ -76,9 +76,9 @@ func Cost(deltas []*Delta) (cost uint) {
 	return
 }
 
-// Diff returns a sequence of deltas that transform the first of the given byte arrays to the second.
-func Diff(a, b []byte) (deltas []*Delta) {
-	deltas = diff(a, b, 0, 0)
+// Deltas returns a sequence of deltas that transform the first of the given byte arrays to the second.
+func Deltas(a, b []byte) (deltas []*Delta) {
+	deltas = delta(a, b, 0, 0)
 	// Rebase deltas into sequence
 	var change uint
 	for _, d := range deltas {
@@ -89,7 +89,7 @@ func Diff(a, b []byte) (deltas []*Delta) {
 	return
 }
 
-func diff(a, b []byte, x, y uint) []*Delta {
+func delta(a, b []byte, x, y uint) []*Delta {
 	var deltas []*Delta
 	alen := uint(len(a))
 	blen := uint(len(b))
@@ -111,13 +111,13 @@ func diff(a, b []byte, x, y uint) []*Delta {
 		}
 	} else if a[x] == b[y] {
 		// Match
-		deltas = diff(a, b, x+1, y+1)
+		deltas = delta(a, b, x+1, y+1)
 	} else {
 		// Try Delete
-		ddeltas := diff(a, b, x+1, y)
+		ddeltas := delta(a, b, x+1, y)
 		dcost := Cost(ddeltas)
 		// Try Insert
-		ideltas := diff(a, b, x, y+1)
+		ideltas := delta(a, b, x, y+1)
 		icost := Cost(ideltas)
 		// Compare results
 		if dcost <= icost {

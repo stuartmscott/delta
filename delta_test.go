@@ -1,15 +1,15 @@
-package diff_test
+package delta_test
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/stuartmscott/diff"
+	"github.com/stuartmscott/delta"
 	"testing"
 )
 
 func TestApply(t *testing.T) {
 	for name, tt := range map[string]struct {
 		given    string
-		deltas   []*diff.Delta
+		deltas   []*delta.Delta
 		expected string
 	}{
 		"empty": {},
@@ -19,8 +19,8 @@ func TestApply(t *testing.T) {
 		},
 		"insert_prefix": {
 			given: "bar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("foo"),
 				},
 			},
@@ -28,8 +28,8 @@ func TestApply(t *testing.T) {
 		},
 		"insert_infix": {
 			given: "foar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Insert: []byte("ob"),
 				},
@@ -38,8 +38,8 @@ func TestApply(t *testing.T) {
 		},
 		"insert_suffix": {
 			given: "foo",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Insert: []byte("bar"),
 				},
@@ -48,8 +48,8 @@ func TestApply(t *testing.T) {
 		},
 		"delete_prefix": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 3,
 				},
 			},
@@ -57,8 +57,8 @@ func TestApply(t *testing.T) {
 		},
 		"delete_infix": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 2,
 				},
@@ -67,8 +67,8 @@ func TestApply(t *testing.T) {
 		},
 		"delete_suffix": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Delete: 3,
 				},
@@ -77,11 +77,11 @@ func TestApply(t *testing.T) {
 		},
 		"swap": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("bar"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 6,
 					Delete: 3,
 				},
@@ -90,12 +90,12 @@ func TestApply(t *testing.T) {
 		},
 		"delete_vowels": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 1,
 					Delete: 2,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 1,
 				},
@@ -104,15 +104,15 @@ func TestApply(t *testing.T) {
 		},
 		"delete_consonants": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Delete: 1,
 				},
@@ -121,12 +121,12 @@ func TestApply(t *testing.T) {
 		},
 		"insert_vowels": {
 			given: "fbr",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Offset: 1,
 					Insert: []byte("oo"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 4,
 					Insert: []byte("a"),
 				},
@@ -135,15 +135,15 @@ func TestApply(t *testing.T) {
 		},
 		"insert_consonants": {
 			given: "ooa",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("f"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Insert: []byte("b"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 5,
 					Insert: []byte("r"),
 				},
@@ -152,8 +152,8 @@ func TestApply(t *testing.T) {
 		},
 		"replace": {
 			given: "foo",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 3,
 					Insert: []byte("bar"),
 				},
@@ -162,12 +162,12 @@ func TestApply(t *testing.T) {
 		},
 		"reverse": {
 			given: "foobar",
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 					Insert: []byte("rab"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 5,
 					Delete: 3,
 					Insert: []byte("f"),
@@ -179,7 +179,7 @@ func TestApply(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			buffer := []byte(tt.given)
 			for _, d := range tt.deltas {
-				buffer = diff.Apply(buffer, d)
+				buffer = delta.Apply(buffer, d)
 			}
 			assert.Equal(t, tt.expected, string(buffer))
 		})
@@ -188,89 +188,89 @@ func TestApply(t *testing.T) {
 
 func TestCompact(t *testing.T) {
 	for name, tt := range map[string]struct {
-		deltas, expected []*diff.Delta
+		deltas, expected []*delta.Delta
 	}{
 		"empty": {},
 		"single": {
-			deltas: []*diff.Delta{
-				&diff.Delta{},
+			deltas: []*delta.Delta{
+				&delta.Delta{},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{},
+			expected: []*delta.Delta{
+				&delta.Delta{},
 			},
 		},
 		"consecutive": {
-			deltas: []*diff.Delta{
-				&diff.Delta{},
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{},
+				&delta.Delta{
 					Offset: 1,
 				},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{},
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{},
+				&delta.Delta{
 					Offset: 1,
 				},
 			},
 		},
 		"delete_delete": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 1,
 					Delete: 1,
 				},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 2,
 				},
 			},
 		},
 		"insert_insert": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("a"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Insert: []byte("b"),
 				},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("ab"),
 				},
 			},
 		},
 		"delete_insert": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Insert: []byte("a"),
 				},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 					Insert: []byte("a"),
 				},
 			},
 		},
 		"insert_delete": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("a"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
 			},
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 					Insert: []byte("a"),
 				},
@@ -278,7 +278,7 @@ func TestCompact(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := diff.Compact(tt.deltas)
+			actual := delta.Compact(tt.deltas)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
@@ -286,37 +286,37 @@ func TestCompact(t *testing.T) {
 
 func TestCost(t *testing.T) {
 	for name, tt := range map[string]struct {
-		deltas   []*diff.Delta
+		deltas   []*delta.Delta
 		expected uint
 	}{
 		"empty": {
 			expected: 0,
 		},
 		"single": {
-			deltas: []*diff.Delta{
-				&diff.Delta{},
+			deltas: []*delta.Delta{
+				&delta.Delta{},
 			},
 			expected: 1,
 		},
 		"delete": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
 			},
 			expected: 2,
 		},
 		"insert": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("a"),
 				},
 			},
 			expected: 9,
 		},
 		"replace": {
-			deltas: []*diff.Delta{
-				&diff.Delta{
+			deltas: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 					Insert: []byte("a"),
 				},
@@ -325,16 +325,16 @@ func TestCost(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := diff.Cost(tt.deltas)
+			actual := delta.Cost(tt.deltas)
 			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }
 
-func TestDiff(t *testing.T) {
+func TestDeltas(t *testing.T) {
 	for name, tt := range map[string]struct {
 		a, b     string
-		expected []*diff.Delta
+		expected []*delta.Delta
 	}{
 		"empty": {},
 		"equal": {
@@ -344,8 +344,8 @@ func TestDiff(t *testing.T) {
 		"insert_prefix": {
 			a: "bar",
 			b: "foobar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("foo"),
 				},
 			},
@@ -353,8 +353,8 @@ func TestDiff(t *testing.T) {
 		"insert_infix": {
 			a: "foar",
 			b: "foobar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Insert: []byte("ob"),
 				},
@@ -363,8 +363,8 @@ func TestDiff(t *testing.T) {
 		"insert_suffix": {
 			a: "foo",
 			b: "foobar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Insert: []byte("bar"),
 				},
@@ -373,8 +373,8 @@ func TestDiff(t *testing.T) {
 		"delete_prefix": {
 			a: "foobar",
 			b: "bar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 3,
 				},
 			},
@@ -382,8 +382,8 @@ func TestDiff(t *testing.T) {
 		"delete_infix": {
 			a: "foobar",
 			b: "foar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 2,
 				},
@@ -392,8 +392,8 @@ func TestDiff(t *testing.T) {
 		"delete_suffix": {
 			a: "foobar",
 			b: "foo",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Delete: 3,
 				},
@@ -402,11 +402,11 @@ func TestDiff(t *testing.T) {
 		"swap": {
 			a: "foobar",
 			b: "barfoo",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("bar"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 6,
 					Delete: 3,
 				},
@@ -415,12 +415,12 @@ func TestDiff(t *testing.T) {
 		"delete_vowels": {
 			a: "foobar",
 			b: "fbr",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 1,
 					Delete: 2,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 1,
 				},
@@ -429,15 +429,15 @@ func TestDiff(t *testing.T) {
 		"delete_consonants": {
 			a: "foobar",
 			b: "ooa",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 2,
 					Delete: 1,
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Delete: 1,
 				},
@@ -446,12 +446,12 @@ func TestDiff(t *testing.T) {
 		"insert_vowels": {
 			a: "fbr",
 			b: "foobar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Offset: 1,
 					Insert: []byte("oo"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 4,
 					Insert: []byte("a"),
 				},
@@ -460,15 +460,15 @@ func TestDiff(t *testing.T) {
 		"insert_consonants": {
 			a: "ooa",
 			b: "foobar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Insert: []byte("f"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 3,
 					Insert: []byte("b"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 5,
 					Insert: []byte("r"),
 				},
@@ -477,8 +477,8 @@ func TestDiff(t *testing.T) {
 		"replace": {
 			a: "foo",
 			b: "bar",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 3,
 					Insert: []byte("bar"),
 				},
@@ -487,12 +487,12 @@ func TestDiff(t *testing.T) {
 		"reverse": {
 			a: "foobar",
 			b: "raboof",
-			expected: []*diff.Delta{
-				&diff.Delta{
+			expected: []*delta.Delta{
+				&delta.Delta{
 					Delete: 1,
 					Insert: []byte("rab"),
 				},
-				&diff.Delta{
+				&delta.Delta{
 					Offset: 5,
 					Delete: 3,
 					Insert: []byte("f"),
@@ -501,7 +501,7 @@ func TestDiff(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := diff.Diff([]byte(tt.a), []byte(tt.b))
+			actual := delta.Deltas([]byte(tt.a), []byte(tt.b))
 			assert.Equal(t, tt.expected, actual)
 		})
 	}

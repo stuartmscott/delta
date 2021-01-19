@@ -1,4 +1,4 @@
-module github.com/stuartmscott/diff
+module github.com/stuartmscott/delta
 
 go 1.15
 
