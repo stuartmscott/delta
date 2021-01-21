@@ -169,15 +169,16 @@ func backtrack(a, b []byte, vs []map[int]int, d, k int) []*Delta {
 			dok = false
 		}
 	}
-	if dok {
+	switch {
+	case dok:
 		k = k - 1
 		delta.Offset = uint(delete)
 		delta.Delete = 1
-	} else if iok {
+	case iok:
 		k = k + 1
 		delta.Offset = uint(insert)
 		delta.Insert = []byte{b[insert-k]}
-	} else {
+	default:
 		// Uh oh
 		return nil
 	}
@@ -185,13 +186,14 @@ func backtrack(a, b []byte, vs []map[int]int, d, k int) []*Delta {
 }
 
 func next(a, b []byte, n, m int, v map[int]int, d, k int) (x int, y int) {
-	if k == -d {
+	switch {
+	case k == -d:
 		// Left border so choose k above
 		x = v[k+1]
-	} else if k == d {
+	case k == d:
 		// Top border so choose k below
 		x = v[k-1] + 1
-	} else {
+	default:
 		above, aok := v[k+1]
 		below, bok := v[k-1]
 		if aok && bok {
