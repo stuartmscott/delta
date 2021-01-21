@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/stuartmscott/delta"
 	"io/ioutil"
@@ -8,16 +9,21 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: delta file1 file2")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: delta file1 file2\n")
+	}
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 2 {
+		flag.Usage()
 		return
 	}
-	a, err := ioutil.ReadFile(os.Args[1])
+	a, err := ioutil.ReadFile(args[0])
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	b, err := ioutil.ReadFile(os.Args[2])
+	b, err := ioutil.ReadFile(args[1])
 	if err != nil {
 		fmt.Println(err)
 		return
