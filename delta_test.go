@@ -524,26 +524,26 @@ func BenchmarkDeltas(b *testing.B) {
 	}
 }
 
-func assertMatchesMaster(b *testing.B, directory, name string, actual []byte) {
-	b.Helper()
+func assertMatchesMaster(tb testing.TB, directory, name string, actual []byte) {
+	tb.Helper()
 	masterPath := filepath.Join(directory, name)
 	failedPath := filepath.Join(directory, "failed", name)
 	_, err := os.Stat(masterPath)
 	if os.IsNotExist(err) {
-		assert.Nil(b, writeDiff(b, failedPath, actual))
-		b.Fatalf("Master not found at %s. Diff written to %s might be used as master.", masterPath, failedPath)
+		assert.Nil(tb, writeDiff(tb, failedPath, actual))
+		tb.Fatalf("Master not found at %s. Diff written to %s might be used as master.", masterPath, failedPath)
 	}
 
 	master, err := ioutil.ReadFile(masterPath)
-	assert.NoError(b, err)
+	assert.NoError(tb, err)
 
-	if !assert.Equal(b, master, actual, "Diff did not match master. Actual diff written to file://%s.", failedPath) {
-		assert.Nil(b, writeDiff(b, failedPath, actual))
+	if !assert.Equal(tb, master, actual, "Diff did not match master. Actual diff written to file://%s.", failedPath) {
+		assert.Nil(tb, writeDiff(tb, failedPath, actual))
 	}
 }
 
-func writeDiff(b *testing.B, path string, diff []byte) error {
-	b.Helper()
+func writeDiff(tb testing.TB, path string, diff []byte) error {
+	tb.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
