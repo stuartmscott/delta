@@ -486,6 +486,7 @@ func TestDeltas(t *testing.T) {
 func BenchmarkDeltas(b *testing.B) {
 	wd, err := os.Getwd()
 	assert.NoError(b, err)
+	directory := filepath.Join(wd, "testdata")
 	for name, bb := range map[string]struct {
 		a, b     string
 		expected string
@@ -502,8 +503,8 @@ func BenchmarkDeltas(b *testing.B) {
 		},
 	} {
 		b.Run(name, func(b *testing.B) {
-			aPath := filepath.Join(wd, "testdata", bb.a)
-			bPath := filepath.Join(wd, "testdata", bb.b)
+			aPath := filepath.Join(directory, bb.a)
+			bPath := filepath.Join(directory, bb.b)
 
 			aFile, err := ioutil.ReadFile(aPath)
 			assert.NoError(b, err)
@@ -513,27 +514,31 @@ func BenchmarkDeltas(b *testing.B) {
 			var buffer bytes.Buffer
 			deltas := delta.Deltas(aFile, bFile)
 			delta.WriteTo(&buffer, deltas, aFile)
-			actual := buffer.Bytes()
-
-			masterPath := filepath.Join(wd, "testdata", bb.expected)
-			failedPath := filepath.Join(wd, "testdata/failed", bb.expected)
-			_, err = os.Stat(masterPath)
-			if os.IsNotExist(err) {
-				assert.Nil(b, writeDiff(failedPath, actual))
-				b.Fatalf("Master not found at %s. Diff written to %s might be used as master.", masterPath, failedPath)
-			}
-
-			master, err := ioutil.ReadFile(masterPath)
-			assert.NoError(b, err)
-
-			if !assert.Equal(b, master, actual, "Diff did not match master. Actual diff written to file://%s.", failedPath) {
-				assert.Nil(b, writeDiff(failedPath, actual))
-			}
+			assertMatchesMaster(b, directory, bb.expected, buffer.Bytes())
 		})
 	}
 }
 
-func writeDiff(path string, diff []byte) error {
+func assertMatchesMaster(b *testing.B, directory, name string, actual []byte) {
+	b.Helper()
+	masterPath := filepath.Join(directory, name)
+	failedPath := filepath.Join(directory, "failed", name)
+	_, err := os.Stat(masterPath)
+	if os.IsNotExist(err) {
+		assert.Nil(b, writeDiff(b, failedPath, actual))
+		b.Fatalf("Master not found at %s. Diff written to %s might be used as master.", masterPath, failedPath)
+	}
+
+	master, err := ioutil.ReadFile(masterPath)
+	assert.NoError(b, err)
+
+	if !assert.Equal(b, master, actual, "Diff did not match master. Actual diff written to file://%s.", failedPath) {
+		assert.Nil(b, writeDiff(b, failedPath, actual))
+	}
+}
+
+func writeDiff(b *testing.B, path string, diff []byte) error {
+	b.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
