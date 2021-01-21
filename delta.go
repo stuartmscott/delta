@@ -121,35 +121,7 @@ func edits(a, b []byte, n, m int) int {
 			start := -(d - 2*maximum(0, d-m))
 			end := d - 2*maximum(0, d-n)
 			for k := start; k <= end; k = k + 2 {
-				var x int
-				if k == -d {
-					// Left border so choose k above
-					x = v[k+1]
-				} else if k == d {
-					// Top border so choose k below
-					x = v[k-1] + 1
-				} else {
-					above, aok := v[k+1]
-					below, bok := v[k-1]
-					if aok && bok {
-						// Choose best
-						if below < above {
-							x = above
-						} else {
-							x = below + 1
-						}
-					} else if aok {
-						// Choose above
-						x = above
-					} else {
-						// Choose below
-						x = below + 1
-					}
-				}
-				y := x - k
-				for x < n && y < m && a[x] == b[y] {
-					x, y = x+1, y+1
-				}
+				x, y := next(a, b, n, m, v, d, k)
 				v[k] = x
 				if x >= n && y >= m {
 					return d
@@ -170,35 +142,7 @@ func deltas(a, b []byte, n, m int, max int) []*Delta {
 		count := (end-start)/2 + 1
 		vs[d] = make(map[int]int, count)
 		for k := start; k <= end; k = k + 2 {
-			var x int
-			if k == -d {
-				// Left border so choose k above
-				x = v[k+1]
-			} else if k == d {
-				// Top border so choose k below
-				x = v[k-1] + 1
-			} else {
-				above, aok := v[k+1]
-				below, bok := v[k-1]
-				if aok && bok {
-					// Choose best
-					if below < above {
-						x = above
-					} else {
-						x = below + 1
-					}
-				} else if aok {
-					// Choose above
-					x = above
-				} else {
-					// Choose below
-					x = below + 1
-				}
-			}
-			y := x - k
-			for x < n && y < m && a[x] == b[y] {
-				x, y = x+1, y+1
-			}
+			x, y := next(a, b, n, m, v, d, k)
 			v[k] = x
 			vs[d][k] = x
 			if x >= n && y >= m {
@@ -238,6 +182,38 @@ func backtrack(a, b []byte, vs []map[int]int, d, k int) []*Delta {
 		return nil
 	}
 	return append(backtrack(a, b, vs, d-1, k), delta)
+}
+
+func next(a, b []byte, n, m int, v map[int]int, d, k int) (x int, y int) {
+	if k == -d {
+		// Left border so choose k above
+		x = v[k+1]
+	} else if k == d {
+		// Top border so choose k below
+		x = v[k-1] + 1
+	} else {
+		above, aok := v[k+1]
+		below, bok := v[k-1]
+		if aok && bok {
+			// Choose best
+			if below < above {
+				x = above
+			} else {
+				x = below + 1
+			}
+		} else if aok {
+			// Choose above
+			x = above
+		} else {
+			// Choose below
+			x = below + 1
+		}
+	}
+	y = x - k
+	for x < n && y < m && a[x] == b[y] {
+		x, y = x+1, y+1
+	}
+	return
 }
 
 func minimum(a, b int) int {
