@@ -1,8 +1,12 @@
 package delta_test
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stuartmscott/delta"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -278,55 +282,7 @@ func TestCompact(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := delta.Compact(tt.deltas)
-			assert.Equal(t, tt.expected, actual)
-		})
-	}
-}
-
-func TestCost(t *testing.T) {
-	for name, tt := range map[string]struct {
-		deltas   []*delta.Delta
-		expected uint
-	}{
-		"empty": {
-			expected: 0,
-		},
-		"single": {
-			deltas: []*delta.Delta{
-				&delta.Delta{},
-			},
-			expected: 1,
-		},
-		"delete": {
-			deltas: []*delta.Delta{
-				&delta.Delta{
-					Delete: 1,
-				},
-			},
-			expected: 2,
-		},
-		"insert": {
-			deltas: []*delta.Delta{
-				&delta.Delta{
-					Insert: []byte("a"),
-				},
-			},
-			expected: 9,
-		},
-		"replace": {
-			deltas: []*delta.Delta{
-				&delta.Delta{
-					Delete: 1,
-					Insert: []byte("a"),
-				},
-			},
-			expected: 10,
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			actual := delta.Cost(tt.deltas)
-			assert.Equal(t, tt.expected, actual)
+			assert.Equal(t, tt.expected, delta.Compact(tt.deltas))
 		})
 	}
 }
@@ -340,6 +296,27 @@ func TestDeltas(t *testing.T) {
 		"equal": {
 			a: "foobar",
 			b: "foobar",
+		},
+		"greeting": {
+			a: "Hello World",
+			b: "Hi Earth",
+			expected: []*delta.Delta{
+				&delta.Delta{
+					Offset: 1,
+					Delete: 4,
+					Insert: []byte("i"),
+				},
+				&delta.Delta{
+					Offset: 3,
+					Delete: 2,
+					Insert: []byte("Ea"),
+				},
+				&delta.Delta{
+					Offset: 6,
+					Delete: 2,
+					Insert: []byte("th"),
+				},
+			},
 		},
 		"insert_prefix": {
 			a: "bar",
@@ -404,11 +381,11 @@ func TestDeltas(t *testing.T) {
 			b: "barfoo",
 			expected: []*delta.Delta{
 				&delta.Delta{
-					Insert: []byte("bar"),
+					Delete: 3,
 				},
 				&delta.Delta{
-					Offset: 6,
-					Delete: 3,
+					Offset: 3,
+					Insert: []byte("foo"),
 				},
 			},
 		},
@@ -501,8 +478,64 @@ func TestDeltas(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			actual := delta.Deltas([]byte(tt.a), []byte(tt.b))
-			assert.Equal(t, tt.expected, actual)
+			assert.Equal(t, tt.expected, delta.Deltas([]byte(tt.a), []byte(tt.b)))
 		})
 	}
+}
+
+func BenchmarkDeltas(b *testing.B) {
+	wd, err := os.Getwd()
+	assert.NoError(b, err)
+	for name, bb := range map[string]struct {
+		a, b     string
+		expected string
+	}{
+		"txt": {
+			a:        "file1.txt",
+			b:        "file2.txt",
+			expected: "txt.delta",
+		},
+		"js": {
+			a:        "rhino.js",
+			b:        "ruby.js",
+			expected: "js.delta",
+		},
+	} {
+		b.Run(name, func(b *testing.B) {
+			aPath := filepath.Join(wd, "testdata", bb.a)
+			bPath := filepath.Join(wd, "testdata", bb.b)
+
+			aFile, err := ioutil.ReadFile(aPath)
+			assert.NoError(b, err)
+			bFile, err := ioutil.ReadFile(bPath)
+			assert.NoError(b, err)
+
+			var buffer bytes.Buffer
+			deltas := delta.Deltas(aFile, bFile)
+			delta.WriteTo(&buffer, deltas, aFile)
+			actual := buffer.Bytes()
+
+			masterPath := filepath.Join(wd, "testdata", bb.expected)
+			failedPath := filepath.Join(wd, "testdata/failed", bb.expected)
+			_, err = os.Stat(masterPath)
+			if os.IsNotExist(err) {
+				assert.Nil(b, writeDiff(failedPath, actual))
+				b.Fatalf("Master not found at %s. Diff written to %s might be used as master.", masterPath, failedPath)
+			}
+
+			master, err := ioutil.ReadFile(masterPath)
+			assert.NoError(b, err)
+
+			if !assert.Equal(b, master, actual, "Diff did not match master. Actual diff written to file://%s.", failedPath) {
+				assert.Nil(b, writeDiff(failedPath, actual))
+			}
+		})
+	}
+}
+
+func writeDiff(path string, diff []byte) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, diff, 0644)
 }

@@ -1,5 +1,10 @@
 package delta
 
+import (
+	"fmt"
+	"io"
+)
+
 /*
 	Eugene W. Myers - An O(ND)Difference Algorithm and Its Variations
 
@@ -53,7 +58,7 @@ func Compact(deltas []*Delta) (results []*Delta) {
 		j := i + 1
 		for j < len(deltas) {
 			next := deltas[j]
-			if first.Offset != next.Offset && (len(first.Insert) > 0 || len(next.Insert) > 0 || first.Offset+first.Delete != next.Offset) {
+			if first.Offset != next.Offset && first.Offset+first.Delete != next.Offset {
 				break
 			}
 			first.Delete += next.Delete
@@ -66,73 +71,185 @@ func Compact(deltas []*Delta) (results []*Delta) {
 	return
 }
 
-// Cost returns the total cost of the given deltas.
-func Cost(deltas []*Delta) (cost uint) {
-	for _, d := range deltas {
-		cost++                          // Every delta has a cost of 1
-		cost += d.Delete                // Count every removed byte
-		cost += uint(len(d.Insert) * 8) // Count every added byte
+// Deltas returns a sequence of deltas that transform the first of the given byte arrays into the second.
+func Deltas(a, b []byte) []*Delta {
+	n := len(a)
+	m := len(b)
+	edits := edits(a, b, n, m)
+	if edits < 0 {
+		// Error determining length of edit script
+		return nil
 	}
-	return
-}
-
-// Deltas returns a sequence of deltas that transform the first of the given byte arrays to the second.
-func Deltas(a, b []byte) (deltas []*Delta) {
-	deltas = delta(a, b, 0, 0)
+	ds := deltas(a, b, n, m, edits)
+	// Compact deltas
+	ds = Compact(ds)
 	// Rebase deltas into sequence
 	var change uint
-	for _, d := range deltas {
+	for _, d := range ds {
 		d.Offset += change
 		change -= d.Delete
 		change += uint(len(d.Insert))
 	}
-	return
+	return ds
 }
 
-func delta(a, b []byte, x, y uint) []*Delta {
-	var deltas []*Delta
-	alen := uint(len(a))
-	blen := uint(len(b))
-	if x >= alen {
-		// All remaining in B must be inserted
-		if y < blen {
-			deltas = append(deltas, &Delta{
-				Offset: x,
-				Insert: b[y:],
-			})
+func WriteTo(out io.Writer, deltas []*Delta, buffer []byte) {
+	for _, d := range deltas {
+		fmt.Fprintf(out, "@ %v\n", d.Offset)
+		for i := uint(0); i < d.Delete; i++ {
+			v := buffer[d.Offset+i]
+			fmt.Fprintf(out, "- %3v %s\n", v, string(v))
 		}
-	} else if y >= blen {
-		// All remaining in A must be deleted
-		if x < alen {
-			deltas = append(deltas, &Delta{
-				Offset: x,
-				Delete: alen - x,
-			})
-		}
-	} else if a[x] == b[y] {
-		// Match
-		deltas = delta(a, b, x+1, y+1)
-	} else {
-		// Try Delete
-		ddeltas := delta(a, b, x+1, y)
-		dcost := Cost(ddeltas)
-		// Try Insert
-		ideltas := delta(a, b, x, y+1)
-		icost := Cost(ideltas)
-		// Compare results
-		if dcost <= icost {
-			deltas = append(deltas, &Delta{
-				Offset: x,
-				Delete: 1,
-			})
-			deltas = append(deltas, ddeltas...)
-		} else {
-			deltas = append(deltas, &Delta{
-				Offset: x,
-				Insert: []byte{b[y]},
-			})
-			deltas = append(deltas, ideltas...)
+		buffer = Apply(buffer, d)
+		for i := uint(0); i < uint(len(d.Insert)); i++ {
+			v := buffer[d.Offset+i]
+			fmt.Fprintf(out, "+ %3v %s\n", v, string(v))
 		}
 	}
-	return Compact(deltas)
+}
+
+func edits(a, b []byte, n, m int) int {
+	for _, max := range []int{
+		minimum(n, m),
+		maximum(n, m),
+		n + m,
+		n * m,
+	} {
+		v := make(map[int]int, max+2)
+		v[1] = 0
+		for d := 0; d <= max; d++ {
+			start := -(d - 2*maximum(0, d-m))
+			end := d - 2*maximum(0, d-n)
+			for k := start; k <= end; k = k + 2 {
+				var x int
+				if k == -d {
+					// Left border so choose k above
+					x = v[k+1]
+				} else if k == d {
+					// Top border so choose k below
+					x = v[k-1] + 1
+				} else {
+					above, aok := v[k+1]
+					below, bok := v[k-1]
+					if aok && bok {
+						// Choose best
+						if below < above {
+							x = above
+						} else {
+							x = below + 1
+						}
+					} else if aok {
+						// Choose above
+						x = above
+					} else {
+						// Choose below
+						x = below + 1
+					}
+				}
+				y := x - k
+				for x < n && y < m && a[x] == b[y] {
+					x, y = x+1, y+1
+				}
+				v[k] = x
+				if x >= n && y >= m {
+					return d
+				}
+			}
+		}
+	}
+	return -1
+}
+
+func deltas(a, b []byte, n, m int, max int) []*Delta {
+	v := make(map[int]int, max+2)
+	v[1] = 0
+	vs := make([]map[int]int, max+1)
+	for d := 0; d <= max; d++ {
+		start := -(d - 2*maximum(0, d-m))
+		end := d - 2*maximum(0, d-n)
+		count := (end-start)/2 + 1
+		vs[d] = make(map[int]int, count)
+		for k := start; k <= end; k = k + 2 {
+			var x int
+			if k == -d {
+				// Left border so choose k above
+				x = v[k+1]
+			} else if k == d {
+				// Top border so choose k below
+				x = v[k-1] + 1
+			} else {
+				above, aok := v[k+1]
+				below, bok := v[k-1]
+				if aok && bok {
+					// Choose best
+					if below < above {
+						x = above
+					} else {
+						x = below + 1
+					}
+				} else if aok {
+					// Choose above
+					x = above
+				} else {
+					// Choose below
+					x = below + 1
+				}
+			}
+			y := x - k
+			for x < n && y < m && a[x] == b[y] {
+				x, y = x+1, y+1
+			}
+			v[k] = x
+			vs[d][k] = x
+			if x >= n && y >= m {
+				return backtrack(a, b, vs, d, n-m)
+			}
+		}
+	}
+	return nil
+}
+
+func backtrack(a, b []byte, vs []map[int]int, d, k int) []*Delta {
+	if d <= 0 {
+		return nil
+	}
+	prev := vs[d-1]
+	delta := &Delta{}
+	delete, dok := prev[k-1]
+	insert, iok := prev[k+1]
+	if dok && iok {
+		// Select the best
+		if delete >= insert {
+			iok = false
+		} else {
+			dok = false
+		}
+	}
+	if dok {
+		k = k - 1
+		delta.Offset = uint(delete)
+		delta.Delete = 1
+	} else if iok {
+		k = k + 1
+		delta.Offset = uint(insert)
+		delta.Insert = []byte{b[insert-k]}
+	} else {
+		// Uh oh
+		return nil
+	}
+	return append(backtrack(a, b, vs, d-1, k), delta)
+}
+
+func minimum(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maximum(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
