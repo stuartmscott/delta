@@ -491,15 +491,20 @@ func BenchmarkDeltas(b *testing.B) {
 		a, b     string
 		expected string
 	}{
-		"txt": {
-			a:        "file1.txt",
-			b:        "file2.txt",
-			expected: "txt.delta",
+		"go": {
+			a:        "go1.txt",
+			b:        "go2.txt",
+			expected: "go.delta",
 		},
 		"js": {
 			a:        "rhino.js",
 			b:        "ruby.js",
 			expected: "js.delta",
+		},
+		"txt": {
+			a:        "file1.txt",
+			b:        "file2.txt",
+			expected: "txt.delta",
 		},
 	} {
 		b.Run(name, func(b *testing.B) {
